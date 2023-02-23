@@ -25,10 +25,52 @@ use ic_types::{
         canister_threshold_sig::MasterEcdsaPublicKey,
         threshold_sig::ni_dkg::{NiDkgId, NiDkgTag, NiDkgTranscript},
     },
-    messages::{CallbackId, Response},
+    messages::{CallbackId, Response, SignedIngress, SignedRequestBytes},
     ReplicaVersion,
 };
 use std::collections::BTreeMap;
+
+/// Extracts the ingress messages from the batch delivered by consensus
+fn extract_ingress_messages(
+    height: Height,
+    batch: Option<BatchPayload>,
+    log: &ReplicaLogger,
+    ingress_messages: &mut Vec<SignedRequestBytes>,
+) {
+    if batch.is_none() {
+        return;
+    }
+    let batch = batch.unwrap();
+
+    let signed_ingress: Vec<SignedIngress> = match batch.ingress.clone().try_into() {
+        Ok(signed_ingress) => signed_ingress,
+        Err(err) => {
+            warn!(
+                log,
+                "extract_ingress_messages(): failed to convert signed ingress: height = {:?}, {:?}",
+                height,
+                err
+            );
+            return;
+        }
+    };
+    signed_ingress.into_iter().for_each(|signed_ingress| {
+        let bytes: SignedRequestBytes = signed_ingress.into();
+        warn!(
+            log,
+            "extract_ingress_messages(): h = {:?}, ingress bytes len = {}",
+            height,
+            bytes.len()
+        );
+        ingress_messages.push(bytes);
+    });
+    warn!(
+        log,
+        "extract_ingress_messages(): h = {:?}, ingress messages = {}",
+        height,
+        ingress_messages.len()
+    );
+}
 
 /// Deliver all finalized blocks from
 /// `message_routing.expected_batch_height` to `finalized_height` via
@@ -59,6 +101,7 @@ pub fn deliver_batches(
         return Ok(Height::from(0));
     }
     let mut last_delivered_batch_height = h.decrement();
+    let mut ingress_messages = Vec::new();
     while h <= target_height {
         match (pool.get_finalized_block(h), pool.get_random_tape(h)) {
             (Some(block), Some(tape)) => {
@@ -125,13 +168,16 @@ pub fn deliver_batches(
                 // This flag can only be true, if we've called deliver_batches with a height
                 // limit.  In this case we also want to have a checkpoint for that last height.
                 let persist_batch = Some(h) == max_batch_height_to_deliver;
+                let mut cur_batch = None;
                 let batch = Batch {
                     batch_number: h,
                     requires_full_state_hash: block.payload.is_summary() || persist_batch,
                     payload: if block.payload.is_summary() {
                         BatchPayload::default()
                     } else {
-                        BlockPayload::from(block.payload).into_data().batch
+                        let batch = BlockPayload::from(block.payload).into_data().batch;
+                        cur_batch = Some(batch.clone());
+                        batch
                     },
                     randomness,
                     ecdsa_subnet_public_keys: ecdsa_subnet_public_key.into_iter().collect(),
@@ -154,6 +200,8 @@ pub fn deliver_batches(
                 if let Err(err) = result {
                     warn!(every_n_seconds => 5, log, "Batch delivery failed: {:?}", err);
                     return Err(err);
+                } else {
+                    extract_ingress_messages(h, cur_batch, log, &mut ingress_messages);
                 }
                 last_delivered_batch_height = h;
                 h = h.increment();
