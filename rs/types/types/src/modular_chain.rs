@@ -4,14 +4,15 @@
 
 use serde::{Deserialize, Serialize};
 
+/// Transactions delivered to external users
 #[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct Transaction {
-    data: Vec<u8>,
+pub struct TransactionExt {
+    pub data: Vec<u8>,
 }
 
-
+/// Blocks delivered to external users
 #[derive(Clone, Debug, Serialize, Deserialize)]
-pub struct Block {
-    height: u64,
-    transactions: Vec<Transaction>,
+pub struct BlockExt {
+    pub height: u64,
+    pub transactions: Vec<TransactionExt>,
 }

@@ -18,6 +18,7 @@
 //! become finalized.
 use crate::consensus::{
     batch_delivery::deliver_batches,
+    consensus_sink::{new_sink, ConsensusSink},
     membership::Membership,
     metrics::{BatchStats, BlockStats, FinalizerMetrics},
     pool_reader::PoolReader,
@@ -44,6 +45,7 @@ pub struct Finalizer {
     log: ReplicaLogger,
     metrics: FinalizerMetrics,
     prev_finalized_height: RefCell<Height>,
+    sink: Box<dyn ConsensusSink>,
 }
 
 impl Finalizer {
@@ -68,6 +70,7 @@ impl Finalizer {
             log,
             metrics: FinalizerMetrics::new(metrics_registry),
             prev_finalized_height: RefCell::new(Height::from(0)),
+            sink: new_sink(),
         }
     }
 
@@ -100,6 +103,7 @@ impl Finalizer {
             Some(&|result, block_stats, batch_stats| {
                 self.process_batch_delivery_result(result, block_stats, batch_stats)
             }),
+            Some(self.sink.as_ref()),
         );
 
         // Try to finalize rounds from finalized_height + 1 up to (and including)

@@ -3,6 +3,7 @@
 //! subnets.
 
 use crate::consensus::{
+    consensus_sink::ConsensusSink,
     metrics::{BatchStats, BlockStats},
     pool_reader::PoolReader,
     prelude::*,
@@ -26,6 +27,7 @@ use ic_types::{
         threshold_sig::ni_dkg::{NiDkgId, NiDkgTag, NiDkgTranscript},
     },
     messages::{CallbackId, Response, SignedIngress, SignedRequestBytes},
+    modular_chain::{BlockExt, TransactionExt},
     ReplicaVersion,
 };
 use std::collections::BTreeMap;
@@ -35,7 +37,7 @@ fn extract_ingress_messages(
     height: Height,
     batch: Option<BatchPayload>,
     log: &ReplicaLogger,
-    ingress_messages: &mut Vec<SignedRequestBytes>,
+    blocks: &mut Vec<BlockExt>,
 ) {
     if batch.is_none() {
         return;
@@ -54,6 +56,10 @@ fn extract_ingress_messages(
             return;
         }
     };
+    let mut block_ext = BlockExt {
+        height: height.get(),
+        transactions: Vec::new(),
+    };
     signed_ingress.into_iter().for_each(|signed_ingress| {
         let bytes: SignedRequestBytes = signed_ingress.into();
         warn!(
@@ -62,14 +68,10 @@ fn extract_ingress_messages(
             height,
             bytes.len()
         );
-        ingress_messages.push(bytes);
+        let transaction = TransactionExt { data: bytes.into() };
+        block_ext.transactions.push(transaction);
     });
-    warn!(
-        log,
-        "extract_ingress_messages(): h = {:?}, ingress messages = {}",
-        height,
-        ingress_messages.len()
-    );
+    blocks.push(block_ext);
 }
 
 /// Deliver all finalized blocks from
@@ -88,6 +90,7 @@ pub fn deliver_batches(
     // deliver all bathes up to the height `min(h, finalized_height)`.
     max_batch_height_to_deliver: Option<Height>,
     result_processor: Option<&dyn Fn(&Result<(), MessageRoutingError>, BlockStats, BatchStats)>,
+    sink: Option<&dyn ConsensusSink>,
 ) -> Result<Height, MessageRoutingError> {
     let finalized_height = pool.get_finalized_height();
     // If `max_batch_height_to_deliver` is specified and smaller than
@@ -101,7 +104,7 @@ pub fn deliver_batches(
         return Ok(Height::from(0));
     }
     let mut last_delivered_batch_height = h.decrement();
-    let mut ingress_messages = Vec::new();
+    let mut blocks = Vec::new();
     while h <= target_height {
         match (pool.get_finalized_block(h), pool.get_random_tape(h)) {
             (Some(block), Some(tape)) => {
@@ -201,7 +204,7 @@ pub fn deliver_batches(
                     warn!(every_n_seconds => 5, log, "Batch delivery failed: {:?}", err);
                     return Err(err);
                 } else {
-                    extract_ingress_messages(h, cur_batch, log, &mut ingress_messages);
+                    extract_ingress_messages(h, cur_batch, log, &mut blocks);
                 }
                 last_delivered_batch_height = h;
                 h = h.increment();
@@ -223,6 +226,9 @@ pub fn deliver_batches(
                 break;
             }
         }
+    }
+    if let Some(sink) = sink {
+        sink.emit(blocks);
     }
     Ok(last_delivered_batch_height)
 }

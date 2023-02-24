@@ -4,6 +4,7 @@
 pub mod batch_delivery;
 pub(crate) mod block_maker;
 mod catchup_package_maker;
+pub mod consensus_sink;
 pub(crate) mod crypto;
 pub mod dkg_key_manager;
 mod finalizer;
