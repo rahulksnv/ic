@@ -4906,6 +4906,7 @@ dependencies = [
  "rand_chacha 0.3.1",
  "rayon",
  "serde_cbor",
+ "serde_json",
  "slog",
  "slog-async",
  "slog-envlogger",

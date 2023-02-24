@@ -67,10 +67,10 @@ impl Finalizer {
             crypto,
             message_routing,
             ingress_selector,
+            sink: new_sink(log.clone()),
             log,
             metrics: FinalizerMetrics::new(metrics_registry),
             prev_finalized_height: RefCell::new(Height::from(0)),
-            sink: new_sink(),
         }
     }
 
