@@ -25,6 +25,7 @@ pub use ic_canister_sandbox_common::{RUN_AS_CANISTER_SANDBOX_FLAG, RUN_AS_SANDBO
 /// receives execution and management instructions from the controller
 /// process, and it calls for system call and execution state change
 /// operations into the controller.
+///
 pub fn canister_sandbox_main() {
     let socket = child_process_initialization();
     let mut embedder_config_arg = None;
@@ -35,7 +36,7 @@ pub fn canister_sandbox_main() {
             let config_arg = args.next().expect("Missing embedder config.");
             embedder_config_arg = Some(
                 serde_json::from_str(config_arg.as_str())
-                    .unwrap_or_else(|err| panic!("Could not parse the argument, invalid embedder config value: err = {}, config =  {}",
+                    .unwrap_or_else(|err| panic!("canister_sandbox_main(): Failed to parse the argument, invalid embedder config value: err = {}, config =  {}",
                     err, config_arg.as_str()))
             )
         }
