@@ -35,7 +35,8 @@ pub fn canister_sandbox_main() {
             let config_arg = args.next().expect("Missing embedder config.");
             embedder_config_arg = Some(
                 serde_json::from_str(config_arg.as_str())
-                    .expect("Could not parse the argument, invalid embedder config value."),
+                    .unwrap_or_else(|err| panic!("Could not parse the argument, invalid embedder config value: err = {}, config =  {}",
+                    err, config_arg.as_str()))
             )
         }
     }
