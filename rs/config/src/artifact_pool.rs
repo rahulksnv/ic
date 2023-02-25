@@ -21,7 +21,7 @@ pub struct ArtifactPoolTomlConfig {
     /// The path in which to store the validated section of the consensus pool.
     pub consensus_pool_path: PathBuf,
     /// See [`ArtifactPoolConfig`]
-    pub ingress_pool_max_count: usize,
+    pub ingress_pool_max_count: Option<usize>,
     /// See [`ArtifactPoolConfig`]
     pub ingress_pool_max_bytes: usize,
     /// Choice of persistent pool backend database. None means default choice,
@@ -146,7 +146,7 @@ impl From<ArtifactPoolTomlConfig> for ArtifactPoolConfig {
             ingress_pool_validated_capacity: MAX_INGRESS_POOL_VALIDATED_CAPACITY,
             ingress_pool_unvalidated_capacity_per_peer:
                 MAX_INGRESS_POOL_UNVALIDATED_CAPACITY_PER_PEER,
-            ingress_pool_max_count: toml_config.ingress_pool_max_count,
+            ingress_pool_max_count: toml_config.ingress_pool_max_count.unwrap_or(1024),
             ingress_pool_max_bytes: toml_config.ingress_pool_max_bytes,
             consensus_pool_unvalidated_capacity_per_peer: MAX_CONSENSUS_POOL_VALIDATED_CAPACITY,
             consensus_pool_validated_capacity: MAX_CONSENSUS_POOL_UNVALIDATED_CAPACITY_PER_PEER,
