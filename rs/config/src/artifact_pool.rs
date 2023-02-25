@@ -23,7 +23,7 @@ pub struct ArtifactPoolTomlConfig {
     /// See [`ArtifactPoolConfig`]
     pub ingress_pool_max_count: Option<usize>,
     /// See [`ArtifactPoolConfig`]
-    pub ingress_pool_max_bytes: usize,
+    pub ingress_pool_max_bytes: Option<usize>,
     /// Choice of persistent pool backend database. None means default choice,
     /// which at the moment is "lmdb".
     #[serde(skip_serializing_if = "Option::is_none")]
@@ -41,7 +41,7 @@ impl ArtifactPoolTomlConfig {
         Self {
             consensus_pool_path,
             ingress_pool_max_count: Some(usize::MAX),
-            ingress_pool_max_bytes: usize::MAX,
+            ingress_pool_max_bytes: Some(usize::MAX),
             consensus_pool_backend: Some("lmdb".to_string()),
             backup,
         }
@@ -147,7 +147,7 @@ impl From<ArtifactPoolTomlConfig> for ArtifactPoolConfig {
             ingress_pool_unvalidated_capacity_per_peer:
                 MAX_INGRESS_POOL_UNVALIDATED_CAPACITY_PER_PEER,
             ingress_pool_max_count: toml_config.ingress_pool_max_count.unwrap_or(usize::MAX),
-            ingress_pool_max_bytes: toml_config.ingress_pool_max_bytes,
+            ingress_pool_max_bytes: toml_config.ingress_pool_max_bytes.unwrap_or(usize::MAX),
             consensus_pool_unvalidated_capacity_per_peer: MAX_CONSENSUS_POOL_VALIDATED_CAPACITY,
             consensus_pool_validated_capacity: MAX_CONSENSUS_POOL_UNVALIDATED_CAPACITY_PER_PEER,
             persistent_pool_backend,
