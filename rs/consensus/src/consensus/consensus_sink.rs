@@ -106,6 +106,7 @@ impl ConsensusSink for FileSink {
         }
         if !blocks.is_empty() {
             // Read the blocks, append, write back
+            // TODO: disk ops causing consensus starvation messages, move to worker thread
             let mut cur_blocks = self.read_blocks();
             cur_blocks.append(&mut blocks);
             self.write_blocks(cur_blocks);
