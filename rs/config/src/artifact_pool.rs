@@ -40,7 +40,7 @@ impl ArtifactPoolTomlConfig {
     pub fn new(consensus_pool_path: PathBuf, backup: Option<BackupConfig>) -> Self {
         Self {
             consensus_pool_path,
-            ingress_pool_max_count: usize::MAX,
+            ingress_pool_max_count: Some(usize::MAX),
             ingress_pool_max_bytes: usize::MAX,
             consensus_pool_backend: Some("lmdb".to_string()),
             backup,
@@ -146,7 +146,7 @@ impl From<ArtifactPoolTomlConfig> for ArtifactPoolConfig {
             ingress_pool_validated_capacity: MAX_INGRESS_POOL_VALIDATED_CAPACITY,
             ingress_pool_unvalidated_capacity_per_peer:
                 MAX_INGRESS_POOL_UNVALIDATED_CAPACITY_PER_PEER,
-            ingress_pool_max_count: toml_config.ingress_pool_max_count.unwrap_or(1024),
+            ingress_pool_max_count: toml_config.ingress_pool_max_count.unwrap_or(usize::MAX),
             ingress_pool_max_bytes: toml_config.ingress_pool_max_bytes,
             consensus_pool_unvalidated_capacity_per_peer: MAX_CONSENSUS_POOL_VALIDATED_CAPACITY,
             consensus_pool_validated_capacity: MAX_CONSENSUS_POOL_UNVALIDATED_CAPACITY_PER_PEER,
