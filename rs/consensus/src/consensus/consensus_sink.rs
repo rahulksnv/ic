@@ -86,11 +86,30 @@ impl FileSink {
 }
 
 impl ConsensusSink for FileSink {
-    fn emit(&self, mut blocks: Vec<BlockExt>) {
-        // Read the blocks, append, write back
-        let mut cur_blocks = self.read_blocks();
-        cur_blocks.append(&mut blocks);
-        self.write_blocks(cur_blocks);
+    fn emit(&self, blocks: Vec<BlockExt>) {
+        // Skip blocks with no transactions.
+        let mut blocks: Vec<BlockExt> = blocks
+            .into_iter()
+            .filter(|block| !block.transactions.is_empty())
+            .collect();
+        for block in blocks.iter() {
+            for (index, transaction) in block.transactions.iter().enumerate() {
+                warn!(
+                    self.log,
+                    "FileSink::emit(): height = {}, txn = {}/{}, txn_size = {}",
+                    block.height,
+                    index + 1,
+                    block.transactions.len(),
+                    transaction.data.len()
+                );
+            }
+        }
+        if !blocks.is_empty() {
+            // Read the blocks, append, write back
+            let mut cur_blocks = self.read_blocks();
+            cur_blocks.append(&mut blocks);
+            self.write_blocks(cur_blocks);
+        }
     }
 }
 
